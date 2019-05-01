@@ -44,7 +44,7 @@ var exampleHanded = NewElementNode("html", nil, []*Node{
 var example = `<html>
 <body>
     <h1>Title</h1>
-    <div id="main" class="test">thing
+    <div id="main" class="test">
         <p>Hello <em>world</em>!one</p>
     </div>
 </body>

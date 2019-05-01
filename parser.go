@@ -70,6 +70,9 @@ func (s *Tokenizer) Scan() Token {
 
 		if c == '<' {
 			c, _, err := s.r.ReadRune()
+			if err != nil {
+				log.Fatalln("Scan 2:", err)
+			}
 			if c == '/' {
 				token.Type = lessSlash
 				break
@@ -174,6 +177,7 @@ func (p *Parser) Parse() *Node {
 	for {
 		t := p.consumeSpaces()
 		if t.Type == lessSlash {
+			p.t.Unscan(t)
 			return nil
 		} else if t.Type == less {
 			return p.parseElementNode()
@@ -201,11 +205,10 @@ func (p *Parser) parseElementNode() *Node {
 		childs = append(childs, child)
 	}
 	t = p.consumeSpaces()
-	t2 := p.consumeSpaces()
 	t3 := p.consumeSpaces()
 	t4 := p.consumeSpaces()
-	if t.Type != less || t2.Type != lessSlash || t3.Type != text || t4.Type != greater {
-		log.Fatalln("expected closing tag, got: ", t, t2, t3, t4)
+	if t.Type != lessSlash || t3.Type != text || t4.Type != greater {
+		log.Fatalln("expected closing tag, got: ", t, t3, t4)
 	}
 	if t3.Data != name {
 		log.Fatalln("unmatching closing tag name")
@@ -247,11 +250,8 @@ func (p *Parser) parseAttributes() map[string]string {
 	return attrs
 }
 
-func printNesting(w io.Writer, nesting int) {
-	fmt.Fprintf(w, "\r\n")
-	for count := 0; count < nesting; count++ {
-		fmt.Fprintf(w, "  ")
-	}
+func PrintNode(node *Node, w io.Writer) {
+	printNode(node, w, 0)
 }
 
 func printNode(node *Node, w io.Writer, nesting int) {
@@ -259,7 +259,9 @@ func printNode(node *Node, w io.Writer, nesting int) {
 	case TextNode:
 		io.WriteString(w, node.Data)
 	case ElementNode:
-		fmt.Fprintf(w, "<%s>", node.Data)
+		fmt.Fprintf(w, "<%s", node.Data)
+		printAttributes(w, node.Attributes)
+		fmt.Fprint(w, ">")
 		newLinesNeccessary := len(node.Children) > 0 && node.Children[0].NodeType != TextNode
 		for _, child := range node.Children {
 			if newLinesNeccessary {
@@ -274,6 +276,21 @@ func printNode(node *Node, w io.Writer, nesting int) {
 	}
 }
 
-func PrintNode(node *Node, w io.Writer) {
-	printNode(node, w, 0)
+func printAttributes(w io.Writer, attrs map[string]string) {
+	for k, v := range attrs {
+		fmt.Fprintf(w, " %s=%q", k, v)
+	}
+}
+
+func printNesting(w io.Writer, nesting int) {
+	fmt.Fprintf(w, "\r\n")
+	for count := 0; count < nesting; count++ {
+		fmt.Fprintf(w, "  ")
+	}
+}
+
+func (n *Node) String() string {
+	builder := new(strings.Builder)
+	PrintNode(n, builder)
+	return builder.String()
 }
