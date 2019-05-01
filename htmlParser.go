@@ -102,7 +102,6 @@ func (s *Tokenizer) Scan() Token {
 			break
 		}
 	}
-	fmt.Println("return: ", token)
 	return token
 }
 
