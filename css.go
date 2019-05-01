@@ -11,26 +11,38 @@ import (
 	"unicode"
 )
 
-// Example:
-// h1, h2, h3 { margin: auto; color: #cc0000; }
-// div.note { margin-bottom: 20px; padding: 10px; }
-// #answer { display: none; }
+// TODO:
+//	- Extend the CSS parser to discard any declaration that contains a parse error,
+//	and follow the error handling rules to resume parsing after the end of the declaration.
+//	(https://www.w3.org/TR/CSS2/syndata.html#parsing-errors)
+//	- Make the HTML parser pass the contents of any <style> nodes to the CSS parser,
+//	and return a Document object that includes a list of Stylesheets in addition to the DOM tree.
 
+// Example:
+// 		h1, h2, h3 { margin: auto; color: #cc0000; }
+// 		div.note { margin-bottom: 20px; padding: 10px; }
+// 		#answer { display: none; }
+
+// Stylesheet represents a set of rules for style
 type Stylesheet struct {
 	rules []Rule
 }
 
+// Rule contains a set of selectors and declarators
 type Rule struct {
-	selector   []Selector
-	declarator []Declarator
+	selectors   []*Selector
+	declarators []*Declarator
 }
 
+// Selector specifies which nodes are affected by rule
+// simple only - like tagName#id.class1.class2
 type Selector struct {
 	tagName *string
 	id      *string
 	class   []string
 }
 
+// Declarator describes specific style options
 type Declarator struct {
 	name      string
 	valueType ValueType
@@ -65,6 +77,18 @@ type Colorr struct {
 	a uint8
 }
 
+type bySpecificity []Selector
+
+func (a bySpecificity) Len() int      { return len(a) }
+func (a bySpecificity) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a bySpecificity) Less(i, j int) bool {
+	return false
+}
+
+func compareSpecificity(sel1, sel2 *Selector) {
+
+}
+
 // ParseStylesheet should parse CSS stylesheet
 func ParseStylesheet(r io.Reader) (*Stylesheet, error) {
 	reader := bufio.NewReader(r)
@@ -97,8 +121,8 @@ func parseRule(r *bufio.Reader) (*Rule, error) {
 	return &Rule{selectors, declarators}, nil
 }
 
-func parseSelectors(r *bufio.Reader) ([]Selector, error) {
-	selectors := []Selector{}
+func parseSelectors(r *bufio.Reader) ([]*Selector, error) {
+	selectors := []*Selector{}
 	for {
 		sel, err := parseSelector(r)
 		if sel == nil {
@@ -106,7 +130,7 @@ func parseSelectors(r *bufio.Reader) ([]Selector, error) {
 		} else if err != nil {
 			return nil, err
 		}
-		selectors = append(selectors, *sel)
+		selectors = append(selectors, sel)
 		skipSpaces(r)
 		if !isNextChar(r, ',') {
 			break
@@ -168,9 +192,9 @@ func parseSelector(r *bufio.Reader) (*Selector, error) {
 	}
 }
 
-func parseDeclarators(r *bufio.Reader) ([]Declarator, error) {
+func parseDeclarators(r *bufio.Reader) ([]*Declarator, error) {
 	skipSpaces(r)
-	declarators := []Declarator{}
+	declarators := []*Declarator{}
 	if !consumeRequired(r, '{') {
 		return declarators, fmt.Errorf("{ is required")
 	}
@@ -184,7 +208,7 @@ func parseDeclarators(r *bufio.Reader) ([]Declarator, error) {
 		} else if d == nil {
 			break
 		} else {
-			declarators = append(declarators, *d)
+			declarators = append(declarators, d)
 		}
 	}
 	if !consumeRequired(r, '}') {
