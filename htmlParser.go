@@ -170,14 +170,28 @@ func NewParser(r io.Reader) *Parser {
 	return &Parser{NewTokenizer(r)}
 }
 
+// ParseHtml do this job
 func ParseHtml(r io.Reader) *Node {
 	p := NewParser(r)
 	return p.Parse()
 }
 
+// Parse returns root of document. It will try to parse as much as possible.
+func (p *Parser) Parse() *Node {
+	nodes := []*Node{}
+	for {
+		n := p.parse()
+		if n == nil {
+			break
+		}
+		nodes = append(nodes, n)
+	}
+	return NewRootNode(nodes)
+}
+
 // Parse returns a single node or a single node if </ is encountered.
 // Panic on other errors.
-func (p *Parser) Parse() *Node {
+func (p *Parser) parse() *Node {
 	for {
 		t := p.consumeSpaces()
 		if t.Type == lessSlash {
@@ -188,7 +202,7 @@ func (p *Parser) Parse() *Node {
 		} else if t.Type == text {
 			return NewTextNode(t.Data)
 		} else {
-			log.Fatalln("expected < or text, got", t)
+			return nil
 		}
 	}
 }
@@ -202,7 +216,7 @@ func (p *Parser) parseElementNode() *Node {
 	attrs := p.parseAttributes()
 	childs := []*Node{}
 	for {
-		child := p.Parse()
+		child := p.parse()
 		if child == nil {
 			break
 		}
@@ -255,17 +269,19 @@ func (p *Parser) parseAttributes() map[string]string {
 }
 
 func PrintNode(node *Node, w io.Writer) {
-	printNode(node, w, 0)
+	printNode(node, w, -1)
 }
 
 func printNode(node *Node, w io.Writer, nesting int) {
 	switch node.NodeType {
 	case TextNode:
 		io.WriteString(w, node.Data)
-	case ElementNode:
-		fmt.Fprintf(w, "<%s", node.Data)
-		printAttributes(w, node.Attributes)
-		fmt.Fprint(w, ">")
+	case ElementNode, RootNode:
+		if node.NodeType == ElementNode {
+			fmt.Fprintf(w, "<%s", node.Data)
+			printAttributes(w, node.Attributes)
+			fmt.Fprint(w, ">")
+		}
 		newLinesNeccessary := len(node.Children) > 0 && node.Children[0].NodeType != TextNode
 		for _, child := range node.Children {
 			if newLinesNeccessary {
@@ -273,10 +289,12 @@ func printNode(node *Node, w io.Writer, nesting int) {
 			}
 			printNode(child, w, nesting+1)
 		}
-		if newLinesNeccessary {
-			printNesting(w, nesting)
+		if node.NodeType == ElementNode {
+			if newLinesNeccessary {
+				printNesting(w, nesting)
+			}
+			fmt.Fprintf(w, "</%s>", node.Data)
 		}
-		fmt.Fprintf(w, "</%s>", node.Data)
 	}
 }
 

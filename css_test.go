@@ -173,7 +173,7 @@ func Test_parseDeclarator(t *testing.T) {
 		r := mr("a: b")
 		got, err := parseDeclarator(r)
 
-		if !(err == nil && got != nil && got.name == "a" && got.value.keyword == "b" && got.valueType == Keyword) {
+		if !(err == nil && got != nil && got.name == "a" && got.value.keyword == "b" && got.value.valueType == Keyword) {
 			t.Error(got, err)
 		}
 	})
@@ -181,7 +181,7 @@ func Test_parseDeclarator(t *testing.T) {
 		r := mr("a: 123px")
 		got, err := parseDeclarator(r)
 
-		if !(err == nil && got != nil && got.name == "a" && got.value.length == 123 && got.valueType == Length) {
+		if !(err == nil && got != nil && got.name == "a" && got.value.length == 123 && got.value.valueType == Length) {
 			t.Error(got, err)
 		}
 	})

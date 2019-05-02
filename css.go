@@ -25,7 +25,7 @@ import (
 
 // Stylesheet represents a set of rules for style
 type Stylesheet struct {
-	rules []Rule
+	rules []*Rule
 }
 
 // Rule contains a set of selectors and declarators
@@ -44,9 +44,8 @@ type Selector struct {
 
 // Declarator describes specific style options
 type Declarator struct {
-	name      string
-	valueType valueType
-	value     Value
+	name  string
+	value Value
 }
 
 type valueType int
@@ -64,10 +63,11 @@ const (
 )
 
 type Value struct {
-	keyword  string
-	length   float32
-	unitType UnitType
-	color    Colorr
+	valueType valueType
+	keyword   string
+	length    float32
+	unitType  UnitType
+	color     Colorr
 }
 
 type Colorr struct {
@@ -75,14 +75,6 @@ type Colorr struct {
 	g uint8
 	b uint8
 	a uint8
-}
-
-type bySpecificity []Selector
-
-func (a bySpecificity) Len() int      { return len(a) }
-func (a bySpecificity) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a bySpecificity) Less(i, j int) bool {
-	return false
 }
 
 func (s *Selector) specificity() int {
@@ -112,7 +104,7 @@ func compareSpecificity(sels1, sels2 []*Selector) int {
 // ParseStylesheet should parse CSS stylesheet
 func ParseStylesheet(r io.Reader) (*Stylesheet, error) {
 	reader := bufio.NewReader(r)
-	rules := []Rule{}
+	rules := []*Rule{}
 	for {
 		rule, err := parseRule(reader)
 		if err != nil {
@@ -120,7 +112,7 @@ func ParseStylesheet(r io.Reader) (*Stylesheet, error) {
 		} else if rule == nil {
 			break
 		} else {
-			rules = append(rules, *rule)
+			rules = append(rules, rule)
 		}
 	}
 	return &Stylesheet{rules}, nil
@@ -259,7 +251,7 @@ func parseDeclarator(r *bufio.Reader) (*Declarator, error) {
 		if err != nil {
 			return nil, err
 		}
-		declarator.valueType = Keyword
+		declarator.value.valueType = Keyword
 		declarator.value.keyword = keyword
 	} else if isNextChar(r, '#') {
 		// color
@@ -267,7 +259,7 @@ func parseDeclarator(r *bufio.Reader) (*Declarator, error) {
 		if err != nil {
 			return nil, err
 		}
-		declarator.valueType = ColorValue
+		declarator.value.valueType = ColorValue
 		declarator.value.color = color
 	} else {
 		// length
@@ -275,7 +267,7 @@ func parseDeclarator(r *bufio.Reader) (*Declarator, error) {
 		if err != nil {
 			return nil, err
 		}
-		declarator.valueType = Length
+		declarator.value.valueType = Length
 		declarator.value.unitType = Px
 		declarator.value.length = float32(length)
 	}

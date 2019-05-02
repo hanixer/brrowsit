@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -27,14 +26,62 @@ func Test_styleTree(t *testing.T) {
 		})
 	}
 	t.Run("", func(t *testing.T) {
-		html := `<p>things</p>`
-		css := `p {font-weight: bold}`
+		html := `<p>things</p><div id="uniq">nothings</div>`
+		css := `p {font-weigth: bold} div {color: #001122}`
 		node := ParseHtml(strings.NewReader(html))
 		style, err := ParseStylesheet(strings.NewReader(css))
 		if err != nil {
 			t.Errorf("css parse error")
 		}
 		styled := styleTree(node, style)
-		fmt.Println(styled)
+		if !(styled.node.NodeType == RootNode) {
+			t.Errorf("show be root")
+		}
+		if !(len(styled.children) == 2) {
+			t.Error("should be 2 children")
+		}
+		ch1 := styled.children[0]
+		if !(ch1.node.TagName() == "p" && pmapContainsKey(ch1.specifiedValues, "font-weigth")) {
+			t.Error("wrong 1st node")
+		}
+		ch1 = styled.children[1]
+		if !(ch1.node.TagName() == "div" && pmapContainsKey(ch1.specifiedValues, "color") &&
+			pmapHasType(ch1.specifiedValues, "color", ColorValue)) {
+			t.Error("wrong 2nd node")
+		}
 	})
+	t.Run("test specifity", func(t *testing.T) {
+		html := `<p id="koin">things</p>`
+		css := `p {font-weight: bold} #koin {color: #001122; font-weight: nono}`
+		node := ParseHtml(strings.NewReader(html))
+		style, err := ParseStylesheet(strings.NewReader(css))
+		if err != nil {
+			t.Errorf("css parse error")
+		}
+		styled := styleTree(node, style)
+		if !(styled.node.NodeType == RootNode) {
+			t.Errorf("show be root")
+		}
+		if !(len(styled.children) == 1) {
+			t.Error("should be 1 children")
+		}
+		ch1 := styled.children[0]
+		if !(ch1.node.TagName() == "p" && pmapContainsKey(ch1.specifiedValues, "font-weight") &&
+			ch1.specifiedValues["font-weight"].keyword == "nono") {
+			t.Error("Wrong properies, got", ch1.specifiedValues["font-weight"].keyword)
+		}
+	})
+}
+
+func pmapContainsKey(decls propertyMap, k string) bool {
+	_, ok := decls[k]
+	return ok
+}
+
+func pmapHasType(decls propertyMap, k string, t valueType) bool {
+	v, ok := decls[k]
+	if ok {
+		return v.valueType == t
+	}
+	return false
 }

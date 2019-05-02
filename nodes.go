@@ -6,6 +6,7 @@ type NodeType int
 const (
 	TextNode NodeType = iota
 	ElementNode
+	RootNode
 )
 
 // Node represents a text node or element node of HTML
@@ -24,6 +25,11 @@ func NewTextNode(s string) *Node {
 // NewElementNode creates it
 func NewElementNode(tagName string, attrs map[string]string, ch []*Node) *Node {
 	return &Node{ElementNode, tagName, ch, attrs}
+}
+
+// NewRootNode creates a node without attributes and tag name
+func NewRootNode(ch []*Node) *Node {
+	return &Node{RootNode, "", ch, make(map[string]string)}
 }
 
 // GetID returns ID if it's present
