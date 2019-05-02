@@ -45,14 +45,14 @@ type Selector struct {
 // Declarator describes specific style options
 type Declarator struct {
 	name      string
-	valueType ValueType
+	valueType valueType
 	value     Value
 }
 
-type ValueType int
+type valueType int
 
 const (
-	Keyword ValueType = iota
+	Keyword valueType = iota
 	Length
 	ColorValue
 )
@@ -85,8 +85,28 @@ func (a bySpecificity) Less(i, j int) bool {
 	return false
 }
 
-func compareSpecificity(sel1, sel2 *Selector) {
+func (s *Selector) specificity() int {
+	result := 0
+	if s.id != nil {
+		result = 100
+	}
+	result += len(s.class) * 10
+	if s.tagName != nil {
+		result++
+	}
+	return result
+}
 
+func compareSpecificity(sels1, sels2 []*Selector) int {
+	spec1 := 0
+	for _, s1 := range sels1 {
+		spec1 += s1.specificity()
+	}
+	spec2 := 0
+	for _, s2 := range sels2 {
+		spec2 += s2.specificity()
+	}
+	return spec1 - spec2
 }
 
 // ParseStylesheet should parse CSS stylesheet

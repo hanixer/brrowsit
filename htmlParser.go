@@ -170,6 +170,11 @@ func NewParser(r io.Reader) *Parser {
 	return &Parser{NewTokenizer(r)}
 }
 
+func ParseHtml(r io.Reader) *Node {
+	p := NewParser(r)
+	return p.Parse()
+}
+
 // Parse returns a single node or a single node if </ is encountered.
 // Panic on other errors.
 func (p *Parser) Parse() *Node {

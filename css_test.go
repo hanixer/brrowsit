@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"reflect"
 	"strings"
@@ -300,4 +301,34 @@ func TestParseStylesheet(t *testing.T) {
 		}
 	})
 
+}
+
+func Test_compareSpecificity(t *testing.T) {
+	type args struct {
+		sels1 []*Selector
+		sels2 []*Selector
+	}
+	tests := []struct {
+		name string
+		args args
+		want int
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := compareSpecificity(tt.args.sels1, tt.args.sels2); got != tt.want {
+				t.Errorf("compareSpecificity() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+	t.Run("", func(t *testing.T) {
+		ss1, _ := ParseStylesheet(mr(`.one, .two, h1 {}`))
+		ss2, _ := ParseStylesheet(mr(`p, .two, .three {}`))
+		fmt.Println(ss1)
+
+		if !(compareSpecificity(ss1.rules[0].selectors, ss2.rules[0].selectors) == 0) {
+			t.Error(ss1, ss2)
+		}
+	})
 }
