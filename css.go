@@ -71,6 +71,13 @@ type Value struct {
 	color     color.RGBA
 }
 
+func (v Value) toPx() float32 {
+	if v.valueType == Length {
+		return v.length
+	}
+	return 0.0
+}
+
 func (s *Selector) specificity() int {
 	result := 0
 	if s.id != nil {

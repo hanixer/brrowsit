@@ -1,5 +1,6 @@
 package main
 
+// NodeType is a type of node
 type NodeType int
 
 // Type of node
@@ -52,6 +53,7 @@ func (n *Node) Class() *string {
 	return nil
 }
 
+// TagName returns tag of element node, empty if not element node
 func (n *Node) TagName() string {
 	return n.Data
 }

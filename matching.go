@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"sort"
 )
 
@@ -13,6 +12,32 @@ type styledNode struct {
 	children        []*styledNode
 }
 
+type displayType int
+
+const (
+	inline displayType = iota
+	block
+	none
+)
+
+func (n *styledNode) displayType() displayType {
+	if n.node.NodeType == ElementNode {
+		v, ok := n.lookup("display")
+		if ok {
+			switch v.keyword {
+			case "block":
+				return block
+			case "inline":
+				return inline
+			case "none":
+				return none
+			}
+		}
+		return block
+	}
+	return inline
+}
+
 func matches(node *Node, selector *Selector) bool {
 	if node.NodeType == TextNode {
 		return false
@@ -22,12 +47,12 @@ func matches(node *Node, selector *Selector) bool {
 		return false
 	}
 
-	if selector.id != nil && *selector.id != *node.GetID() {
+	nodeID := node.GetID()
+	if selector.id != nil && nodeID != nil && *selector.id != *nodeID {
 		return false
 	}
 
 	for _, class := range selector.class {
-		fmt.Println("class is", *node.Class())
 		if class != *node.Class() {
 			return false
 		}
@@ -73,4 +98,25 @@ func styleTree(node *Node, style *Stylesheet) *styledNode {
 		specifiedValues: matchRules(node, style),
 		children:        children,
 	}
+}
+
+func (n *styledNode) lookup(k string) (Value, bool) {
+	v, ok := n.specifiedValues[k]
+	return v, ok
+}
+
+func (n *styledNode) lookupOr(k string, elseVal Value) Value {
+	v, ok := n.specifiedValues[k]
+	if ok {
+		return v
+	}
+	return elseVal
+}
+
+func (n *styledNode) lookupDouble(k1, k2 string, elseVal Value) Value {
+	v, ok := n.lookup(k1)
+	if ok {
+		return v
+	}
+	return n.lookupOr(k2, elseVal)
 }
