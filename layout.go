@@ -41,6 +41,27 @@ var blockTags = []string{
 	"div", "p",
 }
 
+func (r rect) expandedBy(s edgeSizes) rect {
+	return rect{
+		x:      r.x - s.left,
+		y:      r.y - s.top,
+		width:  r.width + s.left + s.right,
+		height: r.height + s.top + s.bottom,
+	}
+}
+
+func (d dimensions) paddingBox() rect {
+	return d.content.expandedBy(d.padding)
+}
+
+func (d dimensions) borderBox() rect {
+	return d.paddingBox().expandedBy(d.border)
+}
+
+func (d dimensions) marginBox() rect {
+	return d.borderBox().expandedBy(d.margin)
+}
+
 func nodesToBoxes(node *styledNode) *layoutBox {
 	childBoxes := []*layoutBox{}
 
@@ -53,6 +74,9 @@ func nodesToBoxes(node *styledNode) *layoutBox {
 	box.boxType = blockNode
 	box.styledNode = node
 
+	if box.styledNode.node.NodeType == RootNode {
+		box.boxType = anonymous
+	}
 	// switch node.displayType() {
 	// case block:
 	// 	// TODO
@@ -67,10 +91,13 @@ func nodesToBoxes(node *styledNode) *layoutBox {
 func (box *layoutBox) layoutRoot(width, height int) {
 	d := dimensions{}
 	d.content.width = float32(width)
-	d.content.height = float32(height)
 
+	box.layoutChildren(d)
+}
+
+func (box *layoutBox) layoutChildren(d dimensions) {
 	for _, child := range box.children {
-		child.layout(box.dimensions)
+		child.layout(d)
 
 		box.calculateHeight(child)
 	}
@@ -80,17 +107,13 @@ func (box *layoutBox) layout(containingBlock dimensions) {
 	box.calculateWidth(containingBlock)
 	box.calculatePosition(containingBlock)
 
-	for _, child := range box.children {
-		child.layout(box.dimensions)
-
-		box.calculateHeight(child)
-	}
+	box.layoutChildren(box.dimensions)
 }
 
 func (box *layoutBox) calculateHeight(lastChild *layoutBox) {
 	d := &box.dimensions
 	cd := &lastChild.dimensions
-	d.content.height += cd.border.bottom + cd.padding.bottom + cd.margin.bottom + cd.content.height
+	d.content.height += cd.marginBox().height
 }
 
 // a lot more simple than specified https://www.w3.org/TR/CSS2/visudet.html#Computing_widths_and_margins

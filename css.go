@@ -333,6 +333,7 @@ func readColor(r *bufio.Reader) (color.RGBA, error) {
 	col.R = b[0]
 	col.G = b[1]
 	col.B = b[2]
+	col.A = 255
 	return col, nil
 }
 

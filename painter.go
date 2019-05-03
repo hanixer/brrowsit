@@ -16,7 +16,7 @@ type drawRect struct {
 }
 
 func (d *drawRect) draw(img *image.RGBA) {
-	fmt.Printf("draw rect, x = %v, y = %v, w = %v, h = %v", d.rect.x, d.rect.y, d.rect.width, d.rect.height)
+	fmt.Printf("x=%v, y=%v, w=%v, h=%v\n", d.rect.x, d.rect.y, d.rect.width, d.rect.height)
 	for x := d.rect.x; x < d.rect.x+d.rect.width; x++ {
 		for y := d.rect.y; y < d.rect.y+d.rect.height; y++ {
 			img.Set(int(x), int(y), d.color)
@@ -38,7 +38,7 @@ func makeDisplayList(layout *layoutBox) []drawCommand {
 		if ok {
 
 		}
-		d := &drawRect{v.color, layout.dimensions.content}
+		d := &drawRect{v.color, layout.dimensions.paddingBox()}
 		commands = append(commands, d)
 	}
 
@@ -50,7 +50,6 @@ func makeDisplayList(layout *layoutBox) []drawCommand {
 }
 
 func drawDisplayList(img *image.RGBA, commands []drawCommand) {
-	fmt.Println("draw list size", len(commands))
 	for _, comm := range commands {
 		comm.draw(img)
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/png"
 	"io"
@@ -57,21 +58,20 @@ var html2 = `<div class="a">
 </div>`
 
 var css2 = `div { display: block; padding: 12px; }
-.a { background: #ff0000; }
-.b { background: #ffa500; }
-.c { background: #ffff00; }
-.d { background: #008000; }
-.e { background: #0000ff; }
-.f { background: #4b0082; }
-.g { background: #800080; }`
+.a { background-color: #ff0000; }
+.b { background-color: #ffa500; }
+.c { background-color: #ffff00; }
+.d { background-color: #008000; }
+.e { background-color: #0000ff; }
+.f { background-color: #4b0082; }
+.g { background-color: #800080; }`
 
 var html3 = `
-<div class="b"></div>
-<div class="c"></div>`
+<div class="c"><div class="b"></div></div>`
 
 var css3 = `div { display: block; padding: 12px; }
-.b { background: #ffa500; }
-.c { background: #ffff00; }`
+.b { background-color: #ffa500; }
+.c { background-color: #ffff00; }`
 
 var layout = newColoredBox(rect{20, 20, 300, 200}, red, []*layoutBox{
 	newColoredBox(rect{100, 100, 50, 40}, green, nil),
@@ -91,7 +91,17 @@ func drawHTMLAndCSS(htmlReader io.Reader, cssReader io.Reader, width int, height
 }
 
 func main() {
-	img := drawHTMLAndCSS(strings.NewReader(html3), strings.NewReader(css3), 600, 400)
-	file, _ := os.Create("trash.png")
+	img := drawHTMLAndCSS(strings.NewReader(html2), strings.NewReader(css2), 600, 400)
+	file, err := os.Create("trash.png")
+	fmt.Println("file error", err)
+	// for i := 0; i < img.Bounds().Size().X; i++ {
+	// 	for j := 0; j < 33; j++ {
+	// 		img.Set(i, 1, color.Black)
+	// 		img.Set(i, 3, color.Black)
+	// 		img.Set(i, 3, color.Black)
+	// 		img.Set(i, j, color.Black)
+	// 	}
+	// }
 	png.Encode(file, img)
+
 }

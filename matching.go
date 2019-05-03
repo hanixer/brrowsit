@@ -52,6 +52,10 @@ func matches(node *Node, selector *Selector) bool {
 		return false
 	}
 
+	if node.Class() == nil {
+		return true
+	}
+
 	for _, class := range selector.class {
 		if class != *node.Class() {
 			return false
