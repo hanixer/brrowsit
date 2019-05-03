@@ -42,23 +42,16 @@ func (t Token) String() string {
 	return fmt.Sprintf("(%s, %q)", t.Type, t.Data)
 }
 
-func (s *Tokenizer) IsNextType(typ TokenType) bool {
-	if s.cached == nil {
-		t := s.Scan()
-		s.cached = &t
-	}
-	return s.cached.Type == typ
-}
-
-func (s *Tokenizer) Scan() Token {
+// Scan and return next token
+func (t *Tokenizer) Scan() Token {
 	var token Token
-	if s.cached != nil {
-		token = *s.cached
-		s.cached = nil
+	if t.cached != nil {
+		token = *t.cached
+		t.cached = nil
 		return token
 	}
 	for {
-		c, _, err := s.r.ReadRune()
+		c, _, err := t.r.ReadRune()
 		if err != nil {
 			if err == io.EOF {
 				token.Type = eof
@@ -69,7 +62,7 @@ func (s *Tokenizer) Scan() Token {
 		}
 
 		if c == '<' {
-			c, _, err := s.r.ReadRune()
+			c, _, err := t.r.ReadRune()
 			if err != nil {
 				log.Fatalln("Scan 2:", err)
 			}
@@ -77,7 +70,7 @@ func (s *Tokenizer) Scan() Token {
 				token.Type = lessSlash
 				break
 			}
-			s.r.UnreadRune()
+			t.r.UnreadRune()
 			token.Type = less
 			break
 		} else if c == '>' {
@@ -88,17 +81,17 @@ func (s *Tokenizer) Scan() Token {
 			break
 		} else if c == '"' {
 			token.Type = stringTok
-			token.Data = scanStringToken(s.r)
+			token.Data = scanStringToken(t.r)
 			break
 		} else if unicode.IsSpace(rune(c)) {
 			token.Type = ws
-			s.r.UnreadRune()
-			token.Data = scanWhitespace(s.r)
+			t.r.UnreadRune()
+			token.Data = scanWhitespace(t.r)
 			break
 		} else {
 			token.Type = text
-			s.r.UnreadRune()
-			token.Data = scanText(s.r)
+			t.r.UnreadRune()
+			token.Data = scanText(t.r)
 			break
 		}
 	}
@@ -156,7 +149,7 @@ func scanText(r *bufio.Reader) string {
 	return builder.String()
 }
 
-// NewParser creates a new Tokenizer from Reader
+// NewTokenizer creates a new Tokenizer from Reader
 func NewTokenizer(r io.Reader) *Tokenizer {
 	return &Tokenizer{bufio.NewReader(r), nil}
 }

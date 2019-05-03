@@ -1,8 +1,9 @@
 package main
 
 import (
-	"fmt"
-	"strings"
+	"image"
+	"image/png"
+	"os"
 )
 
 var exampleHanded = NewElementNode("html", nil, []*Node{
@@ -28,7 +29,16 @@ var example = `<html>
 </body>
 </html>`
 
+var layout = newColoredBox(rect{20, 20, 300, 200}, red, []*layoutBox{
+	newColoredBox(rect{100, 100, 50, 40}, green, nil),
+	newColoredBox(rect{100, 200, 10, 10}, green, nil),
+	newColoredBox(rect{100, 300, 10, 10}, green, nil),
+})
+
 func main() {
-	p := NewParser(strings.NewReader(example))
-	fmt.Println(p.Parse())
+	img := image.NewRGBA(image.Rect(0, 0, 400, 400))
+	commands := makeDisplayList(layout)
+	drawDisplayList(img, commands)
+	file, _ := os.Create("trash.png")
+	png.Encode(file, img)
 }

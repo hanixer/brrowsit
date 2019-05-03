@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/hex"
 	"fmt"
+	"image/color"
 	"io"
 	"regexp"
 	"strconv"
@@ -67,14 +68,7 @@ type Value struct {
 	keyword   string
 	length    float32
 	unitType  UnitType
-	color     Colorr
-}
-
-type Colorr struct {
-	r uint8
-	g uint8
-	b uint8
-	a uint8
+	color     color.RGBA
 }
 
 func (s *Selector) specificity() int {
@@ -311,9 +305,9 @@ func matchStringInsens(r *bufio.Reader, s string) (bool, error) {
 var hexDigit = regexp.MustCompile("[0-9a-fA-F]")
 
 // readColor parses color, must be # folowed by six hex digits
-func readColor(r *bufio.Reader) (Colorr, error) {
+func readColor(r *bufio.Reader) (color.RGBA, error) {
 	r.ReadRune()
-	var col Colorr
+	var col color.RGBA
 	s := ""
 	for {
 		if isNextCharMatches(r, hexDigit) {
@@ -329,9 +323,9 @@ func readColor(r *bufio.Reader) (Colorr, error) {
 	if err != nil {
 		return col, err
 	}
-	col.r = b[0]
-	col.g = b[1]
-	col.b = b[2]
+	col.R = b[0]
+	col.G = b[1]
+	col.B = b[2]
 	return col, nil
 }
 

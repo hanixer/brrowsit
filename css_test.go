@@ -190,7 +190,7 @@ func Test_parseDeclarator(t *testing.T) {
 		got, err := parseDeclarator(r)
 		if err == nil && got != nil && got.name == "a" {
 			c := got.value.color
-			if c.r == 1 && c.g == 2 && c.b == 3 {
+			if c.R == 1 && c.G == 2 && c.B == 3 {
 			} else {
 				t.Error(got, err)
 			}
