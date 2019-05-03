@@ -73,6 +73,29 @@ var css3 = `div { display: block; padding: 12px; }
 .b { background-color: #ffa500; }
 .c { background-color: #ffff00; }`
 
+var html4 = `
+<div class="a">
+    <div class="b">
+        <div class="c">
+        </div>
+    </div>
+    <div class="d">
+        <div class="e">
+        </div>
+    </div>
+</div>`
+
+var css4 = `div { display: block; padding: 12px; }
+.a { background-color: #ff0000; }
+.b {
+	background-color: #ffa500;
+	margin-left: 30px; }
+.c { background-color: #ffff00; }
+.d { background-color: #008000; }
+.e { background-color: #0000ff; }
+.f { background-color: #4b0082; }
+.g { background-color: #800080; }`
+
 var layout = newColoredBox(rect{20, 20, 300, 200}, red, []*layoutBox{
 	newColoredBox(rect{100, 100, 50, 40}, green, nil),
 	newColoredBox(rect{100, 200, 10, 10}, green, nil),
@@ -91,7 +114,7 @@ func drawHTMLAndCSS(htmlReader io.Reader, cssReader io.Reader, width int, height
 }
 
 func main() {
-	img := drawHTMLAndCSS(strings.NewReader(html2), strings.NewReader(css2), 600, 400)
+	img := drawHTMLAndCSS(strings.NewReader(html4), strings.NewReader(css4), 600, 400)
 	file, err := os.Create("trash.png")
 	fmt.Println("file error", err)
 	// for i := 0; i < img.Bounds().Size().X; i++ {

@@ -89,15 +89,15 @@ func nodesToBoxes(node *styledNode) *layoutBox {
 }
 
 func (box *layoutBox) layoutRoot(width, height int) {
-	d := dimensions{}
-	d.content.width = float32(width)
+	box.dimensions = dimensions{}
+	box.dimensions.content.width = float32(width)
 
-	box.layoutChildren(d)
+	box.layoutChildren()
 }
 
-func (box *layoutBox) layoutChildren(d dimensions) {
+func (box *layoutBox) layoutChildren() {
 	for _, child := range box.children {
-		child.layout(d)
+		child.layout(box.dimensions)
 
 		box.calculateHeight(child)
 	}
@@ -107,7 +107,7 @@ func (box *layoutBox) layout(containingBlock dimensions) {
 	box.calculateWidth(containingBlock)
 	box.calculatePosition(containingBlock)
 
-	box.layoutChildren(box.dimensions)
+	box.layoutChildren()
 }
 
 func (box *layoutBox) calculateHeight(lastChild *layoutBox) {
