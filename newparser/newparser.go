@@ -8,6 +8,61 @@ import (
 	"unicode"
 )
 
+// NodeType is a type of node
+type NodeType int
+
+// Type of node
+const (
+	TextNode NodeType = iota
+	ElementNode
+	RootNode
+)
+
+// Node represents a text node or element node of HTML
+type Node struct {
+	NodeType   NodeType
+	Data       string
+	Children   []*Node
+	Attributes map[string]string
+}
+
+// NewTextNode creates it
+func NewTextNode(s string) *Node {
+	return &Node{TextNode, s, []*Node{}, make(map[string]string)}
+}
+
+// NewElementNode creates it
+func NewElementNode(tagName string, attrs map[string]string, ch []*Node) *Node {
+	return &Node{ElementNode, tagName, ch, attrs}
+}
+
+// NewRootNode creates a node without attributes and tag name
+func NewRootNode(ch []*Node) *Node {
+	return &Node{RootNode, "", ch, make(map[string]string)}
+}
+
+// TagName returns tag of element node, empty if not element node
+func (n *Node) TagName() string {
+	return n.Data
+}
+
+///////----------------
+///////----------------
+///////----------------
+///////----------------
+///////----------------
+///////----------------
+///////----------------
+///////----------------
+///////----------------
+///////----------------
+///////----------------
+///////----------------
+///////----------------
+///////----------------
+///////----------------
+///////----------------
+
 type tokenType int
 
 const (
@@ -181,4 +236,49 @@ func (t *tokenizer) readUntil(fin rune) (string, error) {
 
 func (t token) String() string {
 	return fmt.Sprintf("(%s, %q)", t.tokType, t.s)
+}
+
+type parser struct {
+	t *tokenizer
+}
+
+func newParser(r io.Reader) *parser {
+	return &parser{newTokenizer(r)}
+}
+
+func (p *parser) parse() (*Node, error) {
+	t, err := p.t.readToken()
+	if t.tokType == text {
+		return NewTextNode(t.s), err
+	} else if t.tokType == startTag {
+		n, err := p.parseElement(t)
+		return n, err
+	}
+	return nil, nil
+}
+
+func (p *parser) parseElement(t token) (*Node, error) {
+	tagName := t.s
+	attrs := t.attrs
+	children := []*Node{}
+	for {
+		t, err := p.t.readToken()
+		if err != nil {
+			return nil, err
+		}
+		if t.tokType == text {
+			children = append(children, NewTextNode(t.s))
+		} else if t.tokType == startTag {
+			n, err := p.parseElement(t)
+			if err != nil {
+				return nil, err
+			}
+			children = append(children, n)
+		} else if t.tokType == endTag {
+			if tagName != t.s {
+				return nil, fmt.Errorf("Wrong end tag name")
+			}
+			return NewElementNode(tagName, attrs, children), nil
+		}
+	}
 }

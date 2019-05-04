@@ -68,3 +68,39 @@ func Test_tokenizer_readToken(t *testing.T) {
 		}
 	})
 }
+
+func Test_parser_parse(t *testing.T) {
+	someText := "I am a simple text"
+	t.Run("standalone-text", func(t *testing.T) {
+		p := newParser(strings.NewReader(someText))
+		n, err := p.parse()
+		expect := err == nil && n != nil && n.NodeType == TextNode
+		if !expect {
+			t.Error("error : ", err, n)
+		}
+	})
+	t.Run("standalone-div", func(t *testing.T) {
+		p := newParser(strings.NewReader("<div></div>"))
+		n, err := p.parse()
+		expect := err == nil && n != nil && n.NodeType == ElementNode && n.TagName() == "div"
+		if !expect {
+			t.Error("error : ", err, n)
+		}
+	})
+	t.Run("div-with-text", func(t *testing.T) {
+		p := newParser(strings.NewReader("<div>" + someText + "</div>"))
+		n, err := p.parse()
+		expect := err == nil && n != nil && n.NodeType == ElementNode && n.TagName() == "div" && len(n.Children) == 1 && n.Children[0].NodeType == TextNode && n.Children[0].Data == someText
+		if !expect {
+			t.Error("error : ", err, n)
+		}
+	})
+	t.Run("div-with-div", func(t *testing.T) {
+		p := newParser(strings.NewReader("<div><div></div></div>"))
+		n, err := p.parse()
+		expect := err == nil && n != nil && n.NodeType == ElementNode && n.TagName() == "div" && len(n.Children) == 1 && n.Children[0].NodeType == ElementNode && n.Children[0].Data == "div"
+		if !expect {
+			t.Error("error : ", err, n)
+		}
+	})
+}
