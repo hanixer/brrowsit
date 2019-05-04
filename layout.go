@@ -1,6 +1,9 @@
 package main
 
-import "image/color"
+import (
+	"image"
+	"image/color"
+)
 
 type dimensions struct {
 	content rect
@@ -28,9 +31,9 @@ type layoutBox struct {
 type boxType int
 
 const (
-	blockNode boxType = iota
-	inlineNode
-	anonymous
+	blockBox boxType = iota
+	inlineBox
+	anonymousBox
 )
 
 type bounds struct {
@@ -39,6 +42,10 @@ type bounds struct {
 
 var blockTags = []string{
 	"div", "p",
+}
+
+func (r rect) min() image.Point {
+	return image.Point{int(r.x), int(r.y)}
 }
 
 func (r rect) expandedBy(s edgeSizes) rect {
@@ -71,12 +78,16 @@ func nodesToBoxes(node *styledNode) *layoutBox {
 
 	box := new(layoutBox)
 	box.children = childBoxes
-	box.boxType = blockNode
 	box.styledNode = node
 
 	if box.styledNode.node.NodeType == RootNode {
-		box.boxType = anonymous
+		box.boxType = anonymousBox
+	} else if box.styledNode.node.NodeType == TextNode {
+		box.boxType = anonymousBox
+	} else {
+		box.boxType = blockBox
 	}
+
 	// switch node.displayType() {
 	// case block:
 	// 	// TODO

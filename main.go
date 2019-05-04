@@ -96,6 +96,9 @@ var css4 = `div { display: block; padding: 12px; }
 .f { background-color: #4b0082; }
 .g { background-color: #800080; }`
 
+var html5 = `<div>simple text...</div>`
+var css5 = `div { display: block; padding: 12px; }`
+
 var layout = newColoredBox(rect{20, 20, 300, 200}, red, []*layoutBox{
 	newColoredBox(rect{100, 100, 50, 40}, green, nil),
 	newColoredBox(rect{100, 200, 10, 10}, green, nil),
@@ -114,17 +117,8 @@ func drawHTMLAndCSS(htmlReader io.Reader, cssReader io.Reader, width int, height
 }
 
 func main() {
-	img := drawHTMLAndCSS(strings.NewReader(html4), strings.NewReader(css4), 600, 400)
+	img := drawHTMLAndCSS(strings.NewReader(html5), strings.NewReader(css5), 600, 400)
 	file, err := os.Create("trash.png")
 	fmt.Println("file error", err)
-	// for i := 0; i < img.Bounds().Size().X; i++ {
-	// 	for j := 0; j < 33; j++ {
-	// 		img.Set(i, 1, color.Black)
-	// 		img.Set(i, 3, color.Black)
-	// 		img.Set(i, 3, color.Black)
-	// 		img.Set(i, j, color.Black)
-	// 	}
-	// }
 	png.Encode(file, img)
-
 }

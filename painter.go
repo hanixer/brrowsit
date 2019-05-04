@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 )
@@ -15,13 +14,21 @@ type drawRect struct {
 	rect  rect
 }
 
+type drawText struct {
+	s  string
+	pt image.Point
+}
+
 func (d *drawRect) draw(img *image.RGBA) {
-	fmt.Printf("x=%v, y=%v, w=%v, h=%v\n", d.rect.x, d.rect.y, d.rect.width, d.rect.height)
 	for x := d.rect.x; x < d.rect.x+d.rect.width; x++ {
 		for y := d.rect.y; y < d.rect.y+d.rect.height; y++ {
 			img.Set(int(x), int(y), d.color)
 		}
 	}
+}
+
+func (d *drawText) draw(img *image.RGBA) {
+	drawString(d.s, img, d.pt)
 }
 
 func mergeLists(l1 []drawCommand, l2 []drawCommand) []drawCommand {
@@ -33,12 +40,15 @@ func mergeLists(l1 []drawCommand, l2 []drawCommand) []drawCommand {
 
 func makeDisplayList(layout *layoutBox) []drawCommand {
 	commands := []drawCommand{}
-	if layout.boxType != anonymous {
+	if layout.boxType != anonymousBox {
 		v, ok := layout.styledNode.specifiedValues["background-color"]
 		if ok {
 
 		}
 		d := &drawRect{v.color, layout.dimensions.paddingBox()}
+		commands = append(commands, d)
+	} else {
+		d := &drawText{layout.styledNode.node.Data, layout.dimensions.content.min()}
 		commands = append(commands, d)
 	}
 
