@@ -106,7 +106,10 @@ var layout = newColoredBox(rect{20, 20, 300, 200}, red, []*layoutBox{
 })
 
 func drawHTMLAndCSS(htmlReader io.Reader, cssReader io.Reader, width int, height int) *image.RGBA {
-	n := ParseHtml(htmlReader)
+	n, err := parseHTML(htmlReader)
+	if err != nil {
+		log.Fatalln("HTML ERROR.", err)
+	}
 	s, err := ParseStylesheet(cssReader)
 	if err != nil {
 		log.Fatalln("CSS ERROR.", err)
@@ -117,7 +120,7 @@ func drawHTMLAndCSS(htmlReader io.Reader, cssReader io.Reader, width int, height
 }
 
 func main() {
-	img := drawHTMLAndCSS(strings.NewReader(html5), strings.NewReader(css5), 600, 400)
+	img := drawHTMLAndCSS(strings.NewReader(html2), strings.NewReader(css2), 600, 400)
 	file, err := os.Create("trash.png")
 	fmt.Println("file error", err)
 	png.Encode(file, img)

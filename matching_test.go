@@ -28,17 +28,18 @@ func Test_styleTree(t *testing.T) {
 	t.Run("", func(t *testing.T) {
 		html := `<p>things</p><div id="uniq">nothings</div>`
 		css := `p {font-weigth: bold} div {color: #001122}`
-		node := ParseHtml(strings.NewReader(html))
+		node, _ := parseHTMLWrapped(strings.NewReader(html))
 		style, err := ParseStylesheet(strings.NewReader(css))
 		if err != nil {
 			t.Errorf("css parse error")
 		}
 		styled := styleTree(node, style)
 		if !(styled.node.NodeType == RootNode) {
-			t.Errorf("show be root")
+			t.Errorf("should be root")
 		}
-		if !(len(styled.children) == 2) {
+		if !(len(styled.children) >= 2) {
 			t.Error("should be 2 children")
+			return
 		}
 		ch1 := styled.children[0]
 		if !(ch1.node.TagName() == "p" && pmapContainsKey(ch1.specifiedValues, "font-weigth")) {
@@ -53,14 +54,14 @@ func Test_styleTree(t *testing.T) {
 	t.Run("test specifity", func(t *testing.T) {
 		html := `<p id="koin">things</p>`
 		css := `p {font-weight: bold} #koin {color: #001122; font-weight: nono}`
-		node := ParseHtml(strings.NewReader(html))
+		node, _ := parseHTMLWrapped(strings.NewReader(html))
 		style, err := ParseStylesheet(strings.NewReader(css))
 		if err != nil {
 			t.Errorf("css parse error")
 		}
 		styled := styleTree(node, style)
 		if !(styled.node.NodeType == RootNode) {
-			t.Errorf("show be root")
+			t.Errorf("should be root")
 		}
 		if !(len(styled.children) == 1) {
 			t.Error("should be 1 children")

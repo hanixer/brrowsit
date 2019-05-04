@@ -1,4 +1,4 @@
-package newparser
+package main
 
 import (
 	"strings"

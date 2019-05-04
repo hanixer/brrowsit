@@ -4,308 +4,285 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 	"unicode"
 )
 
-// The following syntax is allowed:
-
-//     Balanced tags: <p>...</p>
-//     Attributes with quoted values: id="main"
-//     Text nodes: <em>world</em>
-
-type TokenType int
+type tokenType int
 
 const (
-	less TokenType = iota
-	greater
-	lessSlash
+	eof tokenType = iota
+	startTag
+	endTag
 	text
-	ws
-	equal
-	stringTok
-	eof
 )
 
-type Token struct {
-	Type TokenType
-	Data string
+type token struct {
+	tokType tokenType
+	s       string
+	attrs   map[string]string
 }
 
-type Tokenizer struct {
-	r      *bufio.Reader
-	cached *Token
+type tokenizer struct {
+	r *bufio.Reader
 }
 
-func (t Token) String() string {
-	return fmt.Sprintf("(%s, %q)", t.Type, t.Data)
+func newTokenizer(r io.Reader) *tokenizer {
+	return &tokenizer{bufio.NewReader(r)}
 }
 
-// Scan and return next token
-func (t *Tokenizer) Scan() Token {
-	var token Token
-	if t.cached != nil {
-		token = *t.cached
-		t.cached = nil
-		return token
+var defTok = token{}
+
+func (t *tokenizer) readRune() (c rune, err error) {
+	c, _, err = t.r.ReadRune()
+	return
+}
+
+func (t *tokenizer) readToken() (tok token, err error) {
+	c, err := t.readRune()
+	if err == io.EOF {
+		tok.tokType = eof
+		err = nil
+		return
+	} else if err != nil {
+		return defTok, err
 	}
-	for {
-		c, _, err := t.r.ReadRune()
-		if err != nil {
-			if err == io.EOF {
-				token.Type = eof
-				break
-			} else {
-				log.Fatalln("Scan:", err)
-			}
-		}
 
-		if c == '<' {
-			c, _, err := t.r.ReadRune()
-			if err != nil {
-				log.Fatalln("Scan 2:", err)
-			}
-			if c == '/' {
-				token.Type = lessSlash
-				break
-			}
+	switch c {
+	case '<':
+		tok, err := t.readTag()
+		return tok, err
+	}
+
+	t.r.UnreadRune()
+	tok.s, err = t.readUntil('<')
+	if err != nil && err != io.EOF {
+		return
+	}
+	t.r.UnreadRune()
+	tok.tokType = text
+	err = nil
+	return
+}
+
+func (t *tokenizer) readTag() (tok token, err error) {
+	c, err := t.readRune()
+	if err != nil {
+		return
+	}
+	if c == '/' {
+		tok, err = t.readEndTag()
+		return
+	}
+	tok.s, err = t.readTagName()
+	if err != nil {
+		return
+	}
+	tok.attrs, err = t.readAttrs()
+	tok.tokType = startTag
+	return
+}
+
+func (t *tokenizer) readEndTag() (tok token, err error) {
+	c, err := t.readRune()
+	if err != nil {
+		return defTok, err
+	}
+	n, err := t.readTagName()
+	if err != nil {
+		return defTok, err
+	}
+	c, err = t.readRune()
+	if c != '>' {
+		return defTok, fmt.Errorf("CLOSE END TAG")
+	}
+	tok.tokType = endTag
+	tok.s = n
+	return
+}
+
+func (t *tokenizer) readTagName() (string, error) {
+	s := new(strings.Builder)
+	t.r.UnreadByte()
+	for {
+		c, err := t.readRune()
+		if err != nil {
+			return "", err
+		}
+		if c == '>' || unicode.IsSpace(c) || c == '/' {
 			t.r.UnreadRune()
-			token.Type = less
-			break
-		} else if c == '>' {
-			token.Type = greater
-			break
-		} else if c == '=' {
-			token.Type = equal
-			break
-		} else if c == '"' {
-			token.Type = stringTok
-			token.Data = scanStringToken(t.r)
-			break
-		} else if unicode.IsSpace(rune(c)) {
-			token.Type = ws
-			t.r.UnreadRune()
-			token.Data = scanWhitespace(t.r)
-			break
-		} else {
-			token.Type = text
-			t.r.UnreadRune()
-			token.Data = scanText(t.r)
-			break
+			return s.String(), nil
 		}
+		c = unicode.ToLower(c)
+		s.WriteRune(c)
 	}
-	return token
 }
 
-func (t *Tokenizer) Unscan(tok Token) {
-	t.cached = &tok
-}
-
-func scanStringToken(r *bufio.Reader) string {
-	builder := new(strings.Builder)
+func (t *tokenizer) readAttrs() (attrs map[string]string, err error) {
+	attrs = make(map[string]string)
+	var c rune
+	var k, v string
 	for {
-		b, _, err := r.ReadRune()
+		c, err = t.readRune()
 		if err != nil {
-			log.Fatalln(err)
+			return
 		}
-		if b == '"' {
-			break
+		if unicode.IsSpace(c) {
+			continue
 		}
-		builder.WriteRune(b)
-	}
-	return builder.String()
-}
-
-func scanWhitespace(r *bufio.Reader) string {
-	builder := new(strings.Builder)
-	for {
-		b, _, err := r.ReadRune()
+		if c == '>' {
+			return
+		}
+		if c == '/' {
+			err = t.consumeChar('>')
+			return
+		}
+		t.r.UnreadRune()
+		k, err = t.readUntil('=')
 		if err != nil {
-			log.Fatalln(err)
+			return
 		}
-		if !unicode.IsSpace(b) {
-			r.UnreadRune()
-			break
-		}
-		builder.WriteRune(b)
-	}
-	return builder.String()
-}
-
-func scanText(r *bufio.Reader) string {
-	builder := new(strings.Builder)
-	for {
-		b, _, err := r.ReadRune()
+		err = t.consumeChar('"')
 		if err != nil {
-			log.Fatalln(err)
+			return
 		}
-		if b == '<' || b == '>' || b == '/' || b == '=' || b == '"' || unicode.IsSpace(b) {
-			r.UnreadRune()
-			break
+		v, err = t.readUntil('"')
+		if err != nil {
+			return
 		}
-		builder.WriteRune(b)
-	}
-	return builder.String()
-}
-
-// NewTokenizer creates a new Tokenizer from Reader
-func NewTokenizer(r io.Reader) *Tokenizer {
-	return &Tokenizer{bufio.NewReader(r), nil}
-}
-
-type Parser struct {
-	t *Tokenizer
-}
-
-// NewParser creates a new Parser from Reader
-func NewParser(r io.Reader) *Parser {
-	return &Parser{NewTokenizer(r)}
-}
-
-// ParseHtml do this job
-func ParseHtml(r io.Reader) *Node {
-	p := NewParser(r)
-	return p.Parse()
-}
-
-// Parse returns root of document. It will try to parse as much as possible.
-func (p *Parser) Parse() *Node {
-	nodes := []*Node{}
-	for {
-		n := p.parse()
-		if n == nil {
-			break
-		}
-		nodes = append(nodes, n)
-	}
-	return NewRootNode(nodes)
-}
-
-// Parse returns a single node or a single node if </ is encountered.
-// Panic on other errors.
-func (p *Parser) parse() *Node {
-	for {
-		t := p.consumeSpaces()
-		if t.Type == lessSlash {
-			p.t.Unscan(t)
-			return nil
-		} else if t.Type == less {
-			return p.parseElementNode()
-		} else if t.Type == text {
-			return NewTextNode(t.Data)
-		} else {
-			return nil
-		}
-	}
-}
-
-func (p *Parser) parseElementNode() *Node {
-	t := p.consumeSpaces()
-	if t.Type != text {
-		log.Fatalln("expected start tag name, got", t)
-	}
-	name := t.Data
-	attrs := p.parseAttributes()
-	childs := []*Node{}
-	for {
-		child := p.parse()
-		if child == nil {
-			break
-		}
-		childs = append(childs, child)
-	}
-	t = p.consumeSpaces()
-	t3 := p.consumeSpaces()
-	t4 := p.consumeSpaces()
-	if t.Type != lessSlash || t3.Type != text || t4.Type != greater {
-		log.Fatalln("expected closing tag, got: ", t, t3, t4)
-	}
-	if t3.Data != name {
-		log.Fatalln("unmatching closing tag name")
-	}
-
-	return NewElementNode(name, attrs, childs)
-}
-
-func (p *Parser) consumeSpaces() Token {
-	for {
-		t := p.t.Scan()
-		if t.Type != ws {
-			return t
-		}
-	}
-}
-
-func (p *Parser) parseAttributes() map[string]string {
-	attrs := make(map[string]string)
-	for {
-		t := p.consumeSpaces()
-		if t.Type == greater {
-			break
-		}
-		if t.Type != text {
-			log.Fatalln("expected key of attribute, got", t)
-		}
-		k := t.Data
-		if p.consumeSpaces().Type != equal {
-			log.Fatalln("expected equal sign, got")
-		}
-		t = p.consumeSpaces()
-		if t.Type != stringTok {
-			log.Fatalln("expected value of attribute, got", t)
-		}
-		v := t.Data
 		attrs[k] = v
 	}
-	return attrs
 }
 
-func PrintNode(node *Node, w io.Writer) {
-	printNode(node, w, -1)
+func (t *tokenizer) consumeChar(c rune) error {
+	c2, err := t.readRune()
+	if err != nil {
+		return err
+	} else if c2 != c {
+		return fmt.Errorf("expected %c but got %c", c, c2)
+	} else {
+		return nil
+	}
 }
 
-func printNode(node *Node, w io.Writer, nesting int) {
-	switch node.NodeType {
-	case TextNode:
-		io.WriteString(w, node.Data)
-	case ElementNode, RootNode:
-		if node.NodeType == ElementNode {
-			fmt.Fprintf(w, "<%s", node.Data)
-			printAttributes(w, node.Attributes)
-			fmt.Fprint(w, ">")
+func (t *tokenizer) readUntil(fin rune) (string, error) {
+	s := new(strings.Builder)
+	for {
+		c, err := t.readRune()
+		if err != nil {
+			return s.String(), err
 		}
-		newLinesNeccessary := len(node.Children) > 0 && node.Children[0].NodeType != TextNode
-		for _, child := range node.Children {
-			if newLinesNeccessary {
-				printNesting(w, nesting+1)
+		if c == fin {
+			return s.String(), nil
+		}
+		s.WriteRune(c)
+	}
+}
+
+func (t token) String() string {
+	return fmt.Sprintf("(%s, %q)", t.tokType, t.s)
+}
+
+type htmlParser struct {
+	t *tokenizer
+}
+
+func newParser(r io.Reader) *htmlParser {
+	return &htmlParser{newTokenizer(r)}
+}
+
+// parseHTML parses restricted subset of HTML
+func parseHTML(r io.Reader) (*Node, error) {
+	n, err := newParser(r).parse()
+	return n, err
+}
+
+type concatReader struct {
+	r1     io.Reader
+	r2     io.Reader
+	first  bool
+	second bool
+}
+
+func (r *concatReader) Read(p []byte) (int, error) {
+	if !r.second {
+		return 0, io.EOF
+	}
+	if !r.first {
+		n, err := r.r2.Read(p)
+		if err == io.EOF {
+			r.second = false
+			return n, nil
+		} else if err != nil {
+			return n, err
+		}
+		return n, err
+	}
+	n, err := r.r1.Read(p)
+	if err == io.EOF {
+		r.first = false
+		return n, nil
+	} else if err != nil {
+		return n, err
+	}
+	return n, err
+}
+
+func newConcatReader(r1, r2 io.Reader) io.Reader {
+	return &concatReader{r1, r2, true, true}
+}
+
+// parseHTMLWrapped makes adds imageneary root element,
+// so that strings like "<p></p><div></div>" could be parsed
+func parseHTMLWrapped(r io.Reader) (*Node, error) {
+	nodes := []*Node{}
+	p := newParser(r)
+	var err error
+	for {
+		n, err := p.parse()
+		if err == nil && n != nil {
+			nodes = append(nodes, n)
+		} else {
+			break
+		}
+	}
+
+	return NewRootNode(nodes), err
+}
+
+func (p *htmlParser) parse() (*Node, error) {
+	t, err := p.t.readToken()
+	if t.tokType == text {
+		return NewTextNode(t.s), err
+	} else if t.tokType == startTag {
+		n, err := p.parseElement(t)
+		return n, err
+	}
+	return nil, nil
+}
+
+func (p *htmlParser) parseElement(t token) (*Node, error) {
+	tagName := t.s
+	attrs := t.attrs
+	children := []*Node{}
+	for {
+		t, err := p.t.readToken()
+		if err != nil {
+			return nil, err
+		}
+		if t.tokType == text {
+			children = append(children, NewTextNode(t.s))
+		} else if t.tokType == startTag {
+			n, err := p.parseElement(t)
+			if err != nil {
+				return nil, err
 			}
-			printNode(child, w, nesting+1)
-		}
-		if node.NodeType == ElementNode {
-			if newLinesNeccessary {
-				printNesting(w, nesting)
+			children = append(children, n)
+		} else if t.tokType == endTag {
+			if tagName != t.s {
+				return nil, fmt.Errorf("Wrong end tag name")
 			}
-			fmt.Fprintf(w, "</%s>", node.Data)
+			return NewElementNode(tagName, attrs, children), nil
 		}
 	}
-}
-
-func printAttributes(w io.Writer, attrs map[string]string) {
-	for k, v := range attrs {
-		fmt.Fprintf(w, " %s=%q", k, v)
-	}
-}
-
-func printNesting(w io.Writer, nesting int) {
-	fmt.Fprintf(w, "\r\n")
-	for count := 0; count < nesting; count++ {
-		fmt.Fprintf(w, "  ")
-	}
-}
-
-func (n *Node) String() string {
-	builder := new(strings.Builder)
-	PrintNode(n, builder)
-	return builder.String()
 }
