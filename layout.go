@@ -3,6 +3,7 @@ package main
 import (
 	"image"
 	"image/color"
+	"strings"
 )
 
 type dimensions struct {
@@ -69,11 +70,18 @@ func (d dimensions) marginBox() rect {
 	return d.borderBox().expandedBy(d.margin)
 }
 
+func isJustSpaces(n *Node) bool {
+	return len(strings.TrimSpace(n.Data)) == 0
+}
+
 func nodesToBoxes(node *styledNode) *layoutBox {
 	childBoxes := []*layoutBox{}
 
 	for _, child := range node.children {
-		childBoxes = append(childBoxes, nodesToBoxes(child))
+		b := nodesToBoxes(child)
+		if b != nil {
+			childBoxes = append(childBoxes, b)
+		}
 	}
 
 	box := new(layoutBox)
@@ -84,18 +92,13 @@ func nodesToBoxes(node *styledNode) *layoutBox {
 		box.boxType = anonymousBox
 	} else if box.styledNode.node.NodeType == TextNode {
 		box.boxType = anonymousBox
+		if isJustSpaces(node.node) {
+			box = nil
+		}
 	} else {
 		box.boxType = blockBox
 	}
 
-	// switch node.displayType() {
-	// case block:
-	// 	// TODO
-	// case inline:
-	// 	// TODO:
-	// case none:
-	// 	// nothing TODO
-	// }
 	return box
 }
 

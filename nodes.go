@@ -26,7 +26,7 @@ type Node struct {
 
 // NewTextNode creates it
 func NewTextNode(s string) *Node {
-	return &Node{TextNode, s, []*Node{}, make(map[string]string)}
+	return &Node{TextNode, strings.TrimSpace(s), []*Node{}, make(map[string]string)}
 }
 
 // NewElementNode creates it

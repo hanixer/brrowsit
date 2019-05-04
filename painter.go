@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 )
@@ -20,6 +21,7 @@ type drawText struct {
 }
 
 func (d *drawRect) draw(img *image.RGBA) {
+	fmt.Printf("x=%v, y=%v, w=%v, h=%v\n", d.rect.x, d.rect.y, d.rect.width, d.rect.height)
 	for x := d.rect.x; x < d.rect.x+d.rect.width; x++ {
 		for y := d.rect.y; y < d.rect.y+d.rect.height; y++ {
 			img.Set(int(x), int(y), d.color)

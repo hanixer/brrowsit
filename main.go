@@ -85,19 +85,34 @@ var html4 = `
     </div>
 </div>`
 
+var html41 = `
+<div class="a">
+    <div class="b">
+				<div class="c1">
+					Some text inside
+        </div>
+    </div>
+    <div class="d">
+        <div class="e">
+        </div>
+    </div>
+</div>`
+
 var css4 = `div { display: block; padding: 12px; }
 .a { background-color: #ff0000; }
 .b {
 	background-color: #ffa500;
 	margin-left: 30px; }
 .c { background-color: #ffff00; }
+.c1 { background-color: #ffff00; width: 100px; }
 .d { background-color: #008000; }
 .e { background-color: #0000ff; }
 .f { background-color: #4b0082; }
 .g { background-color: #800080; }`
 
 var html5 = `<div>simple text...</div>`
-var css5 = `div { display: block; padding: 12px; }`
+var html51 = `<div><div>simple text...</div></div>`
+var css5 = `div { display: block; padding: 12px; background-color: #4b0082; }`
 
 var layout = newColoredBox(rect{20, 20, 300, 200}, red, []*layoutBox{
 	newColoredBox(rect{100, 100, 50, 40}, green, nil),
@@ -106,7 +121,7 @@ var layout = newColoredBox(rect{20, 20, 300, 200}, red, []*layoutBox{
 })
 
 func drawHTMLAndCSS(htmlReader io.Reader, cssReader io.Reader, width int, height int) *image.RGBA {
-	n, err := parseHTML(htmlReader)
+	n, err := parseHTMLWrapped(htmlReader)
 	if err != nil {
 		log.Fatalln("HTML ERROR.", err)
 	}
@@ -120,7 +135,7 @@ func drawHTMLAndCSS(htmlReader io.Reader, cssReader io.Reader, width int, height
 }
 
 func main() {
-	img := drawHTMLAndCSS(strings.NewReader(html2), strings.NewReader(css2), 600, 400)
+	img := drawHTMLAndCSS(strings.NewReader(html41), strings.NewReader(css4), 600, 400)
 	file, err := os.Create("trash.png")
 	fmt.Println("file error", err)
 	png.Encode(file, img)
