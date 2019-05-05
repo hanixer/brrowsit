@@ -39,30 +39,33 @@ func (t *tokenizer) readRune() (c rune, err error) {
 }
 
 func (t *tokenizer) readToken() (tok token, err error) {
-	c, err := t.readRune()
-	if err == io.EOF {
-		tok.tokType = eof
-		err = nil
-		return
-	} else if err != nil {
-		return defTok, err
+	for {
+		var c rune
+		c, err = t.readRune()
+		if err == io.EOF {
+			tok.tokType = eof
+			err = nil
+			return
+		} else if err != nil {
+			return defTok, err
+		}
+		if c == '<' {
+			tok, err := t.readTag()
+			return tok, err
+		}
+		t.r.UnreadRune()
+		skipSpaces(t.r)
+		tok.s, err = t.readUntil('<')
+		if err != nil && err != io.EOF {
+			return
+		}
+		t.r.UnreadRune()
+		if len(tok.s) > 0 {
+			tok.tokType = text
+			err = nil
+			return
+		}
 	}
-
-	switch c {
-	case '<':
-		tok, err := t.readTag()
-		return tok, err
-	}
-
-	t.r.UnreadRune()
-	tok.s, err = t.readUntil('<')
-	if err != nil && err != io.EOF {
-		return
-	}
-	t.r.UnreadRune()
-	tok.tokType = text
-	err = nil
-	return
 }
 
 func (t *tokenizer) readTag() (tok token, err error) {

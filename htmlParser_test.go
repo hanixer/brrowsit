@@ -103,4 +103,15 @@ func Test_parser_parse(t *testing.T) {
 			t.Error("error : ", err, n)
 		}
 	})
+	t.Run("div-with-newlines", func(t *testing.T) {
+		html := `<div>
+  <span>1</span>
+</div>`
+		p := newParser(strings.NewReader(html))
+		n, err := p.parse()
+		expect := err == nil && n != nil && n.NodeType == ElementNode && n.TagName() == "div" && len(n.Children) == 1 && n.Children[0].NodeType == ElementNode && n.Children[0].Data == "span"
+		if !expect {
+			t.Error("error : ", err, n, "len(n.Children)", len(n.Children))
+		}
+	})
 }

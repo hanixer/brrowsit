@@ -34,7 +34,9 @@ type boxType int
 const (
 	blockBox boxType = iota
 	inlineBox
+	textBox
 	anonymousBox
+	rootBox
 )
 
 type bounds struct {
@@ -89,14 +91,16 @@ func nodesToBoxes(node *styledNode) *layoutBox {
 	box.styledNode = node
 
 	if box.styledNode.node.NodeType == RootNode {
-		box.boxType = anonymousBox
+		box.boxType = rootBox
 	} else if box.styledNode.node.NodeType == TextNode {
-		box.boxType = anonymousBox
+		box.boxType = textBox
 		if isJustSpaces(node.node) {
 			box = nil
 		}
-	} else {
+	} else if isBlockElement(node) {
 		box.boxType = blockBox
+	} else {
+		box.boxType = inlineBox
 	}
 
 	return box
@@ -109,25 +113,100 @@ func (box *layoutBox) layoutRoot(width, height int) {
 	box.layoutChildren()
 }
 
-func (box *layoutBox) layoutChildren() {
-	for _, child := range box.children {
-		child.layout(box.dimensions)
+func newLineBox(x, y, width float32) *layoutBox {
+	b := new(layoutBox)
+	b.boxType = anonymousBox
+	b.children = []*layoutBox{}
+	b.dimensions.content.x = x
+	b.dimensions.content.y = y
+	b.dimensions.content.width = width
+	return b
+}
 
-		box.calculateHeight(child)
+func (box *layoutBox) nextXPos() float32 {
+	if len(box.children) == 0 {
+		return box.dimensions.content.x
+	}
+	last := box.children[len(box.children)-1]
+	mb := last.dimensions.marginBox()
+	return mb.x + mb.width
+}
+
+func (box *layoutBox) canAppendToLine(inlineBox *layoutBox) bool {
+	x := box.nextXPos()
+	mb := inlineBox.dimensions.marginBox()
+	return x+mb.width < box.dimensions.content.width
+}
+
+func (box *layoutBox) appendToLine(inlineBox *layoutBox) {
+	x := box.nextXPos()
+	inlineBox.dimensions.content.x = x
+	inlineBox.dimensions.content.y = box.dimensions.content.y
+	box.children = append(box.children, inlineBox)
+}
+
+func (box *layoutBox) calculateLineHeight() {
+	var h float32
+	for _, child := range box.children {
+		if child.dimensions.content.height > h {
+			h = child.dimensions.content.height
+		}
 	}
 }
 
-func (box *layoutBox) layout(containingBlock dimensions) {
-	box.calculateWidth(containingBlock)
-	box.calculatePosition(containingBlock)
-
-	box.layoutChildren()
+func (box *layoutBox) layoutChildren() {
+	newChildren := []*layoutBox{}
+	var lineBox *layoutBox
+	x := box.dimensions.content.x
+	y := box.dimensions.content.y
+	width := box.dimensions.content.width
+	for _, child := range box.children {
+		if child.boxType != blockBox {
+			if lineBox == nil {
+				lineBox = newLineBox(x, y, width)
+			}
+			if !lineBox.canAppendToLine(child) {
+				newChildren = box.appendLine(newChildren, lineBox)
+				lineBox = newLineBox(x, y, width)
+			}
+			child.layout(box.dimensions)
+			lineBox.appendToLine(child)
+		} else {
+			child.layout(box.dimensions)
+			newChildren = append(newChildren, child)
+			box.dimensions.content.height += child.dimensions.marginBox().height
+		}
+	}
+	if lineBox != nil {
+		newChildren = box.appendLine(newChildren, lineBox)
+	}
+	box.children = newChildren
 }
 
-func (box *layoutBox) calculateHeight(lastChild *layoutBox) {
-	d := &box.dimensions
-	cd := &lastChild.dimensions
-	d.content.height += cd.marginBox().height
+func (box *layoutBox) appendLine(newChildren []*layoutBox, accumulator *layoutBox) []*layoutBox {
+	newChildren = append(newChildren, accumulator)
+	accumulator.calculateLineHeight()
+	box.dimensions.content.height += accumulator.dimensions.marginBox().height
+	return newChildren
+}
+
+func (box *layoutBox) layout(containingBlock dimensions) {
+	if box.boxType == blockBox {
+		box.calculateWidth(containingBlock)
+		box.calculatePosition(containingBlock)
+	}
+
+	box.layoutChildren()
+
+	if box.boxType != blockBox {
+		for _, child := range box.children {
+			box.dimensions.content.width += child.dimensions.content.width
+		}
+		if box.boxType == textBox {
+			box.dimensions.content.width = float32(getStringWidth(box.styledNode.node.Data))
+			box.dimensions.content.height = float32(getFontHeight())
+		}
+	}
 }
 
 // a lot more simple than specified https://www.w3.org/TR/CSS2/visudet.html#Computing_widths_and_margins

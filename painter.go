@@ -42,14 +42,14 @@ func mergeLists(l1 []drawCommand, l2 []drawCommand) []drawCommand {
 
 func makeDisplayList(layout *layoutBox) []drawCommand {
 	commands := []drawCommand{}
-	if layout.boxType != anonymousBox {
+	if layout.boxType == blockBox {
 		v, ok := layout.styledNode.specifiedValues["background-color"]
 		if ok {
 
 		}
 		d := &drawRect{v.color, layout.dimensions.paddingBox()}
 		commands = append(commands, d)
-	} else {
+	} else if layout.boxType == textBox {
 		d := &drawText{layout.styledNode.node.Data, layout.dimensions.content.min()}
 		commands = append(commands, d)
 	}

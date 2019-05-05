@@ -55,5 +55,22 @@ func drawString(s string, img draw.Image, pt image.Point) {
 		log.Println(err)
 		return
 	}
+}
 
+func getStringWidth(s string) int {
+	face := truetype.NewFace(font, nil)
+	total := 0
+	for _, r := range s {
+		p, ok := face.GlyphAdvance(r)
+		if !ok {
+			log.Fatalln("No glyph for", string(r))
+		}
+		total += p.Round()
+	}
+	return total
+}
+
+func getFontHeight() int {
+	face := truetype.NewFace(font, nil)
+	return face.Metrics().Height.Round()
 }

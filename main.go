@@ -89,7 +89,7 @@ var html41 = `
 <div class="a">
     <div class="b">
 				<div class="c1">
-					Some text inside
+					Some text inside. One two
         </div>
     </div>
     <div class="d">
@@ -114,6 +114,15 @@ var html5 = `<div>simple text...</div>`
 var html51 = `<div><div>simple text...</div></div>`
 var css5 = `div { display: block; padding: 12px; background-color: #4b0082; }`
 
+var html6 = `<div>
+ <span id="s1">SPAN1</span>
+ <span id="s2">SPAN2</span>
+</div>`
+var css6 = `div { display: block; padding: 12px; background-color: #4b0082; }
+span { display: inline }
+#s1 { background-color: #008000 }
+#s2 { background-color: #0000ff }`
+
 var layout = newColoredBox(rect{20, 20, 300, 200}, red, []*layoutBox{
 	newColoredBox(rect{100, 100, 50, 40}, green, nil),
 	newColoredBox(rect{100, 200, 10, 10}, green, nil),
@@ -135,7 +144,7 @@ func drawHTMLAndCSS(htmlReader io.Reader, cssReader io.Reader, width int, height
 }
 
 func main() {
-	img := drawHTMLAndCSS(strings.NewReader(html41), strings.NewReader(css4), 600, 400)
+	img := drawHTMLAndCSS(strings.NewReader(html6), strings.NewReader(css6), 600, 400)
 	file, err := os.Create("trash.png")
 	fmt.Println("file error", err)
 	png.Encode(file, img)
