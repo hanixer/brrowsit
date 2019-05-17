@@ -103,11 +103,14 @@ func nodesToBoxes(node *styledNode) *layoutBox {
 			continue
 		}
 
-		if isOnlyInline && childBox.isBlock() && len(childBoxes) > 0 {
+		if isOnlyInline && childBox.isBlock() {
 			isOnlyInline = false
-			anonymous := makeAnonymousBlockBox()
-			anonymous.children = childBoxes
-			childBoxes = []*layoutBox{anonymous, childBox}
+			if len(childBoxes) > 0 {
+				anonymous := makeAnonymousBlockBox()
+				anonymous.children = childBoxes
+				childBoxes = []*layoutBox{anonymous}
+			}
+			childBoxes = append(childBoxes, childBox)
 		} else if !isOnlyInline && !childBox.isBlock() {
 			// the child should be added to anonymous box
 			last := childBoxes[len(childBoxes)-1]
@@ -119,9 +122,6 @@ func nodesToBoxes(node *styledNode) *layoutBox {
 				childBoxes = append(childBoxes, anonymous)
 			}
 		} else {
-			if isOnlyInline && childBox.isBlock() {
-				isOnlyInline = false
-			}
 			childBoxes = append(childBoxes, childBox)
 		}
 	}
