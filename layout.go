@@ -1,8 +1,17 @@
 package main
 
+// LayoutObject
+// - LayoutText
+// - LayoutBox
+// -- LayoutBlock
+// -- LayoutInline
+// -- LayoutLineBox
+
 import (
+	"fmt"
 	"image"
 	"image/color"
+	"io"
 	"strings"
 )
 
@@ -76,13 +85,44 @@ func isJustSpaces(n *Node) bool {
 	return len(strings.TrimSpace(n.Data)) == 0
 }
 
+func makeAnonymousBlockBox() *layoutBox {
+	box := new(layoutBox)
+	box.boxType = blockBox
+	box.children = []*layoutBox{}
+	box.styledNode = nil
+	return box
+}
+
 func nodesToBoxes(node *styledNode) *layoutBox {
 	childBoxes := []*layoutBox{}
+	isOnlyInline := true
 
 	for _, child := range node.children {
-		b := nodesToBoxes(child)
-		if b != nil {
-			childBoxes = append(childBoxes, b)
+		childBox := nodesToBoxes(child)
+		if childBox == nil {
+			continue
+		}
+
+		if isOnlyInline && childBox.isBlock() && len(childBoxes) > 0 {
+			isOnlyInline = false
+			anonymous := makeAnonymousBlockBox()
+			anonymous.children = childBoxes
+			childBoxes = []*layoutBox{anonymous, childBox}
+		} else if !isOnlyInline && !childBox.isBlock() {
+			// the child should be added to anonymous box
+			last := childBoxes[len(childBoxes)-1]
+			if last.isAnonymous() {
+				last.children = append(last.children, childBox)
+			} else {
+				anonymous := makeAnonymousBlockBox()
+				anonymous.children = []*layoutBox{childBox}
+				childBoxes = append(childBoxes, anonymous)
+			}
+		} else {
+			if isOnlyInline && childBox.isBlock() {
+				isOnlyInline = false
+			}
+			childBoxes = append(childBoxes, childBox)
 		}
 	}
 
@@ -183,6 +223,21 @@ func (box *layoutBox) layoutChildren() {
 	box.children = newChildren
 }
 
+func (box *layoutBox) isBlock() bool {
+	return box.boxType == blockBox
+}
+
+func (box *layoutBox) isAnonymous() bool {
+	return box.boxType != textBox && box.styledNode == nil
+}
+
+func (box *layoutBox) tag() string {
+	if (box.boxType == blockBox || box.boxType == inlineBox) && box.styledNode != nil && box.styledNode.node != nil {
+		return box.styledNode.node.TagName()
+	}
+	return ""
+}
+
 func (box *layoutBox) appendLine(newChildren []*layoutBox, accumulator *layoutBox) []*layoutBox {
 	newChildren = append(newChildren, accumulator)
 	accumulator.calculateLineHeight()
@@ -212,6 +267,10 @@ func (box *layoutBox) layout(containingBlock dimensions) {
 // a lot more simple than specified https://www.w3.org/TR/CSS2/visudet.html#Computing_widths_and_margins
 func (box *layoutBox) calculateWidth(containingBlock dimensions) {
 	node := box.styledNode
+	if node == nil {
+		return
+	}
+
 	auto := Value{keyword: "auto"}
 	width := node.lookupOr("width", auto)
 	zero := Value{length: 0, valueType: Length}
@@ -244,6 +303,10 @@ func (box *layoutBox) calculateWidth(containingBlock dimensions) {
 
 func (box *layoutBox) calculatePosition(containingBlock dimensions) {
 	node := box.styledNode
+	if node == nil {
+		return
+	}
+
 	zero := Value{length: 0, valueType: Length}
 	d := &box.dimensions
 
@@ -297,4 +360,29 @@ func isBlockElement(node *styledNode) bool {
 		}
 	}
 	return false
+}
+
+// PrintLayoutTree prints the tree
+func PrintLayoutTree(box *layoutBox, w io.Writer) {
+	printLayoutTree(box, w, 0)
+}
+
+func printLayoutTree(box *layoutBox, w io.Writer, nesting int) {
+	fmt.Fprint(w, box.boxType)
+	if box.tag() != "" {
+		fmt.Fprintf(w, " <%s> ", box.tag())
+	}
+	if box.boxType == textBox {
+		fmt.Fprintf(w, " %q", box.styledNode.node.Data)
+	}
+	for _, c := range box.children {
+		printNesting(w, nesting+1)
+		printLayoutTree(c, w, nesting+1)
+	}
+}
+
+func (box *layoutBox) String() string {
+	build := new(strings.Builder)
+	PrintLayoutTree(box, build)
+	return build.String()
 }

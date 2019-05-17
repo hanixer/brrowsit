@@ -122,6 +122,8 @@ var css6 = `div { display: block; padding: 12px; background-color: #4b0082; }
 span { display: inline }
 #s1 { background-color: #008000 }
 #s2 { background-color: #0000ff }`
+var html7 = `<P>Several <EM>emphasized words</EM> appear
+<STRONG>in this</STRONG> sentence, dear.</P>`
 
 var layout = newColoredBox(rect{20, 20, 300, 200}, red, []*layoutBox{
 	newColoredBox(rect{100, 100, 50, 40}, green, nil),
@@ -129,7 +131,7 @@ var layout = newColoredBox(rect{20, 20, 300, 200}, red, []*layoutBox{
 	newColoredBox(rect{100, 300, 10, 10}, green, nil),
 })
 
-func drawHTMLAndCSS(htmlReader io.Reader, cssReader io.Reader, width int, height int) *image.RGBA {
+func makeStyledNodeFromString(htmlReader io.Reader, cssReader io.Reader) *styledNode {
 	n, err := parseHTMLWrapped(htmlReader)
 	if err != nil {
 		log.Fatalln("HTML ERROR.", err)
@@ -139,12 +141,18 @@ func drawHTMLAndCSS(htmlReader io.Reader, cssReader io.Reader, width int, height
 		log.Fatalln("CSS ERROR.", err)
 	}
 	st := styleTree(n, s)
+	return st
+}
+
+func drawHTMLAndCSS(htmlReader io.Reader, cssReader io.Reader, width int, height int) *image.RGBA {
+	st := makeStyledNodeFromString(htmlReader, cssReader)
 	r := nodesToBoxes(st)
+	fmt.Print(r.String())
 	return layoutAndDraw(r, width, height)
 }
 
 func main() {
-	img := drawHTMLAndCSS(strings.NewReader(html6), strings.NewReader(css6), 600, 400)
+	img := drawHTMLAndCSS(strings.NewReader(html7), strings.NewReader(css6), 600, 400)
 	file, err := os.Create("trash.png")
 	fmt.Println("file error", err)
 	png.Encode(file, img)

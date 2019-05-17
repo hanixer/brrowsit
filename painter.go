@@ -42,7 +42,7 @@ func mergeLists(l1 []drawCommand, l2 []drawCommand) []drawCommand {
 
 func makeDisplayList(layout *layoutBox) []drawCommand {
 	commands := []drawCommand{}
-	if layout.boxType == blockBox {
+	if layout.boxType == blockBox && layout.styledNode != nil {
 		v, ok := layout.styledNode.specifiedValues["background-color"]
 		if ok {
 
